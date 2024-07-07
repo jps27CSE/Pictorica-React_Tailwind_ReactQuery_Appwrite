@@ -1,5 +1,11 @@
+import { Button } from "@/components/ui/button";
+
 const SignupForm = () => {
-  return <div>SignUpForm</div>;
+  return (
+    <div>
+      <Button>Signup</Button>
+    </div>
+  );
 };
 
 export default SignupForm;
