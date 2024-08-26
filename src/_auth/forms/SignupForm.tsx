@@ -13,14 +13,26 @@ import { Input } from "@/components/ui/input";
 import { SignupValidation } from "@/lib/validation";
 import { z } from "zod";
 import Loader from "@/components/shared/Loader.tsx";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useToast } from "@/components/ui/use-toast.ts";
-import { useCreateUserAccountMutation } from "@/lib/react-query/queriesAndMutations.ts";
+import {
+  useCreateUserAccount,
+  useSignInAccount,
+} from "@/lib/react-query/queriesAndMutations.ts";
+import { useUserContext } from "@/context/AuthContext.tsx";
 
 const SignupForm = () => {
   const { toast } = useToast();
+  const { checkAuthUser, isLoading: isUserLoading } = useUserContext();
+  const navigate = useNavigate();
   const { mutateAsync: createUserAccount, isLoading: isCreatingAccount } =
-    useCreateUserAccountMutation();
+    useCreateUserAccount();
+
+  const {
+    mutateAsync: signInAccount,
+    isLoading,
+    isSigninIn,
+  } = useSignInAccount();
 
   const form = useForm<z.infer<typeof SignupValidation>>({
     resolver: zodResolver(SignupValidation),
@@ -37,6 +49,28 @@ const SignupForm = () => {
     if (!newUser) {
       return toast({
         title: "Sign up failed. Please try again",
+      });
+    }
+
+    const session = await signInAccount({
+      email: values.email,
+      password: values.password,
+    });
+
+    if (!session) {
+      return toast({
+        title: "Sign in failed. Please try again",
+      });
+    }
+
+    const isLoggedIn = await checkAuthUser();
+
+    if (isLoggedIn) {
+      form.reset();
+      navigate("/");
+    } else {
+      return toast({
+        title: "Sign in failed. Please try again",
       });
     }
   }
