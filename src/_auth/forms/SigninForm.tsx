@@ -10,7 +10,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { SigninValidation, SignupValidation } from "@/lib/validation";
+import { SigninValidation } from "@/lib/validation";
 import { z } from "zod";
 import Loader from "@/components/shared/Loader.tsx";
 import { Link, useNavigate } from "react-router-dom";
@@ -23,7 +23,7 @@ const SigninForm = () => {
   const { checkAuthUser, isLoading: isUserLoading } = useUserContext();
   const navigate = useNavigate();
 
-  const { mutateAsync: signInAccount, isPending } = useSignInAccount();
+  const { mutateAsync: signInAccount } = useSignInAccount();
 
   const form = useForm<z.infer<typeof SigninValidation>>({
     resolver: zodResolver(SigninValidation),
