@@ -7,7 +7,7 @@ import {
   useSavePost,
 } from "@/lib/react-query/queriesAndMutations.ts";
 import { checkIsLiked } from "@/lib/utils.ts";
-import { Loader } from "lucide-react";
+import Loader from "@/components/shared/Loader.tsx";
 
 type PostStatsProps = {
   post: Models.Document;
