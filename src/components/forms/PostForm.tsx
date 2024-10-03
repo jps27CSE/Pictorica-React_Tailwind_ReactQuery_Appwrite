@@ -1,6 +1,8 @@
+import * as nsfwjs from "nsfwjs";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
+import { useState } from "react"; // Import useState for managing state
 import { Button } from "@/components/ui/button";
 import {
   Form,
@@ -39,6 +41,9 @@ const PostForm = ({ post, action }: PostFormProps) => {
   const { toast } = useToast();
   const navigate = useNavigate();
 
+  const [captionInput, setCaptionInput] = useState("");
+  const [isImageSafe, setIsImageSafe] = useState(true);
+
   const form = useForm<z.infer<typeof PostValidation>>({
     resolver: zodResolver(PostValidation),
     defaultValues: {
@@ -49,7 +54,60 @@ const PostForm = ({ post, action }: PostFormProps) => {
     },
   });
 
+  const handleCaptionChange = (value: string) => {
+    setCaptionInput(value);
+    form.setValue("caption", value);
+  };
+
+  const checkImageSafety = async (file: File) => {
+    const model = await nsfwjs.load();
+    const image = await loadImage(file); // Function to create an image from the file
+
+    const predictions = await model.classify(image);
+
+    const isNeutralOrDrawing =
+      predictions[0].className === "Neutral" ||
+      predictions[0].className === "Drawing";
+
+    // Get the percentage of the first prediction
+    const firstPredictionPercentage = predictions[0].probability;
+
+    if (isNeutralOrDrawing) {
+      setIsImageSafe(true);
+      toast({
+        title: "Image Checked",
+        description: `Appropriate image detected with ${Math.round(firstPredictionPercentage * 100)}% confidence.`,
+        variant: "success",
+      });
+    } else {
+      setIsImageSafe(false);
+      toast({
+        title: "Image Checked",
+        description: `Inappropriate image detected with ${Math.round(firstPredictionPercentage * 100)}% confidence. Please choose a different image or ensure that it is suitable for posting.`,
+        variant: "error",
+      });
+    }
+  };
+
+  // Helper function to load image from file
+  const loadImage = (file: File) => {
+    return new Promise<HTMLImageElement>((resolve) => {
+      const img = new Image();
+      img.src = URL.createObjectURL(file);
+      img.onload = () => resolve(img);
+    });
+  };
+
   async function onSubmit(values: z.infer<typeof PostValidation>) {
+    if (!isImageSafe) {
+      toast({
+        title: "Image not safe for posting.",
+        description: "Please choose a different image.",
+        variant: "error",
+      });
+      return;
+    }
+
     if (post && action === "Update") {
       const updatedPost = await updatePost({
         ...values,
@@ -94,12 +152,31 @@ const PostForm = ({ post, action }: PostFormProps) => {
                 <Textarea
                   className="shad-textarea custom-scrollbar"
                   {...field}
+                  onChange={(e) => handleCaptionChange(e.target.value)} // Update state on change
                 />
               </FormControl>
               <FormMessage className="shad-form_message" />
             </FormItem>
           )}
         />
+
+        {/* Conditional Rendering for Grammar Check Button */}
+        {captionInput && (
+          <div className="flex justify-end">
+            <Button
+              type="button"
+              className="shad-button_secondary"
+              onClick={() => {
+                // Logic for grammar checking can be implemented here
+                toast({
+                  title: "Grammar check functionality is not implemented yet.",
+                });
+              }}
+            >
+              Check Grammar
+            </Button>
+          </div>
+        )}
 
         <FormField
           control={form.control}
@@ -109,7 +186,12 @@ const PostForm = ({ post, action }: PostFormProps) => {
               <FormLabel className="shad-form_label">Add Photos</FormLabel>
               <FormControl>
                 <FileUploader
-                  fieldChange={field.onChange}
+                  fieldChange={(file: File[]) => {
+                    field.onChange(file);
+                    if (file.length > 0) {
+                      checkImageSafety(file[0]); // Check the first selected file for safety
+                    }
+                  }}
                   mediaUrl={post?.imageUrl}
                 />
               </FormControl>
@@ -152,6 +234,7 @@ const PostForm = ({ post, action }: PostFormProps) => {
             </FormItem>
           )}
         />
+
         <div className="flex gap-4 items-center justify-end">
           <Button type="button" className="shad-button_dark_4">
             Cancel
@@ -159,14 +242,14 @@ const PostForm = ({ post, action }: PostFormProps) => {
           <Button
             type="submit"
             className="shad-button_primary whitespace-nowrap"
-            disabled={isLoadingCreate || isLoadingUpdate}
+            disabled={isLoadingCreate || isLoadingUpdate || !isImageSafe} // Disable if image is not safe
           >
-            {isLoadingCreate || (isLoadingUpdate && "Loading....")}
-            {action} Post
+            {isLoadingCreate || isLoadingUpdate ? "Loading...." : action} Post
           </Button>
         </div>
       </form>
     </Form>
   );
 };
+
 export default PostForm;

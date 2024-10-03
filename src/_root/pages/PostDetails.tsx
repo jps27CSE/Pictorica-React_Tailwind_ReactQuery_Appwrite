@@ -1,17 +1,31 @@
-import { Link, useParams } from "react-router-dom";
-import { useGetPostById } from "@/lib/react-query/queriesAndMutations.ts";
+import { Link, useNavigate, useParams } from "react-router-dom";
+import {
+  useDeletePost,
+  useGetPostById,
+} from "@/lib/react-query/queriesAndMutations.ts";
 import Loader from "@/components/shared/Loader.tsx";
 import { multiFormatDateString } from "@/lib/utils.ts";
 import { useUserContext } from "@/context/AuthContext.tsx";
 import { Button } from "@/components/ui/button.tsx";
 import PostStats from "@/components/shared/PostStats.tsx";
+import ConfirmDeleteModal from "@/components/shared/ConfirmDeleteModal.tsx";
+import { useState } from "react";
 
 const PostDetails = () => {
   const { id } = useParams();
   const { data: post, isPending } = useGetPostById(id || "");
+  const navigate = useNavigate();
   const { user } = useUserContext();
+  const { mutate: deletePost, isLoading: isDeleting } = useDeletePost(id || "");
+  const [isModalOpen, setModalOpen] = useState(false);
 
-  const handleDelete = () => {};
+  const handleDelete = () => {
+    if (post?.$id && post?.imageId) {
+      deletePost({ postId: post.$id, imageId: post.imageId });
+      setModalOpen(false);
+      navigate("/");
+    }
+  };
 
   return (
     <div className="post_details-container">
@@ -63,7 +77,7 @@ const PostDetails = () => {
                   />
                 </Link>
                 <Button
-                  onClick={handleDelete}
+                  onClick={() => setModalOpen(true)}
                   variant="ghost"
                   className={`ghost_details-delete_btn ${user.id !== post?.creator.$id && "hidden"}`}
                 >
@@ -93,6 +107,11 @@ const PostDetails = () => {
           </div>
         </div>
       )}
+      <ConfirmDeleteModal
+        isOpen={isModalOpen}
+        onClose={() => setModalOpen(false)}
+        onConfirm={handleDelete}
+      />
     </div>
   );
 };
