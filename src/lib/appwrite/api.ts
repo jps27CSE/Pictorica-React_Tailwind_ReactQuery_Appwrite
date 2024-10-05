@@ -456,3 +456,22 @@ export async function getUsers(limit?: number) {
     console.log(error);
   }
 }
+
+export async function checkForProfanity(text: string) {
+  try {
+    const response = await fetch(
+      `https://api.api-ninjas.com/v1/profanityfilter?text=${encodeURIComponent(text)}`,
+      {
+        method: "GET",
+        headers: {
+          "X-Api-Key": import.meta.env.VITE_API_NINJAS,
+        },
+      },
+    );
+    const data = await response.json();
+    return data.has_profanity;
+  } catch (error) {
+    console.log(error);
+    return false;
+  }
+}

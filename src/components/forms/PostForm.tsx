@@ -24,6 +24,7 @@ import {
   useCreatePost,
   useUpdatePost,
 } from "@/lib/react-query/queriesAndMutations.ts";
+import { checkForProfanity } from "@/lib/appwrite/api.ts";
 
 type PostFormProps = {
   post?: Models.Document;
@@ -99,6 +100,20 @@ const PostForm = ({ post, action }: PostFormProps) => {
   };
 
   async function onSubmit(values: z.infer<typeof PostValidation>) {
+    const hasProfanityInCaption = await checkForProfanity(values.caption);
+    const hasProfanityInLocation = await checkForProfanity(values.location);
+    const hasProfanityInTags = await checkForProfanity(values.tags);
+
+    if (hasProfanityInCaption || hasProfanityInTags || hasProfanityInLocation) {
+      toast({
+        title: "Inappropriate words Detected ",
+        description:
+          "Please remove any inappropriate language from the caption, location, or tags.",
+        variant: "error",
+      });
+      return;
+    }
+
     if (!isImageSafe) {
       toast({
         title: "Image not safe for posting.",
