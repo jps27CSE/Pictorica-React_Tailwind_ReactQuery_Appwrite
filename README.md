@@ -65,6 +65,6 @@ Check out the live version of the app here: [Pictorica Live](https://pictorica.n
 
 ## Demo Video
 
-Watch the demo video here: [Pictorica Demo]()
+Watch the demo video here: [Pictorica Demo](https://drive.google.com/file/d/1N6DtiOIHpcfuy9GcB3IGHKDD1KksbSNq/view?usp=sharing)
 
 ---
