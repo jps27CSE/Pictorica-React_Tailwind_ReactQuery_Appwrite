@@ -44,7 +44,8 @@ const PostForm = ({ post, action }: PostFormProps) => {
 
   const [captionInput, setCaptionInput] = useState("");
   const [isImageSafe, setIsImageSafe] = useState(true);
-  const [paraphrases, setParaphrases] = useState([]);
+  const [isImageProcessing, setIsImageProcessing] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const form = useForm<z.infer<typeof PostValidation>>({
     resolver: zodResolver(PostValidation),
@@ -62,6 +63,7 @@ const PostForm = ({ post, action }: PostFormProps) => {
   };
 
   const checkImageSafety = async (file: File) => {
+    setIsImageProcessing(true);
     const model = await nsfwjs.load();
     const image = await loadImage(file); // Function to create an image from the file
 
@@ -80,6 +82,7 @@ const PostForm = ({ post, action }: PostFormProps) => {
         title: "Image Checked",
         description: `Appropriate image detected with ${Math.round(firstPredictionPercentage * 100)}% confidence.`,
         variant: "success",
+        duration: 2000,
       });
     } else {
       setIsImageSafe(false);
@@ -87,8 +90,10 @@ const PostForm = ({ post, action }: PostFormProps) => {
         title: "Image Checked",
         description: `Inappropriate image detected with ${Math.round(firstPredictionPercentage * 100)}% confidence. Please choose a different image or ensure that it is suitable for posting.`,
         variant: "error",
+        duration: 2000,
       });
     }
+    setIsImageProcessing(false);
   };
 
   // Helper function to load image from file
@@ -101,6 +106,8 @@ const PostForm = ({ post, action }: PostFormProps) => {
   };
 
   async function onSubmit(values: z.infer<typeof PostValidation>) {
+    if (isSubmitting) return;
+    setIsSubmitting(true);
     const hasProfanityInCaption = await checkForProfanity(values.caption);
     const hasProfanityInLocation = await checkForProfanity(values.location);
     const hasProfanityInTags = await checkForProfanity(values.tags);
@@ -112,6 +119,7 @@ const PostForm = ({ post, action }: PostFormProps) => {
           "Please remove any inappropriate language from the caption, location, or tags.",
         variant: "error",
       });
+      setIsSubmitting(false);
       return;
     }
 
@@ -121,35 +129,47 @@ const PostForm = ({ post, action }: PostFormProps) => {
         description: "Please choose a different image.",
         variant: "error",
       });
+      setIsSubmitting(false);
       return;
     }
 
-    if (post && action === "Update") {
-      const updatedPost = await updatePost({
-        ...values,
-        postId: post.$id,
-        imageId: post?.imageId,
-        imageUrl: post?.imageUrl,
-      });
+    try {
+      if (post && action === "Update") {
+        const updatedPost = await updatePost({
+          ...values,
+          postId: post.$id,
+          imageId: post?.imageId,
+          imageUrl: post?.imageUrl,
+        });
 
-      if (!updatedPost) {
-        toast({ title: "Please try again" });
+        if (!updatedPost) {
+          toast({ title: "Please try again" });
+        }
+        return navigate(`/posts/${post.$id}`);
       }
-      return navigate(`/posts/${post.$id}`);
-    }
 
-    const newPost = await createPost({
-      ...values,
-      userId: user.id,
-    });
-
-    if (!newPost) {
-      toast({
-        title: "Please try again",
+      const newPost = await createPost({
+        ...values,
+        userId: user.id,
       });
-    }
 
-    navigate("/");
+      if (!newPost) {
+        toast({
+          title: "Please try again",
+        });
+      }
+
+      navigate("/");
+    } catch (error) {
+      toast({
+        title: "An error occurred!",
+        description: "Please try again later.",
+        variant: "error",
+        duration: 3000,
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   }
 
   return (
@@ -267,7 +287,13 @@ const PostForm = ({ post, action }: PostFormProps) => {
           <Button
             type="submit"
             className="shad-button_primary whitespace-nowrap"
-            disabled={isLoadingCreate || isLoadingUpdate || !isImageSafe} // Disable if image is not safe
+            disabled={
+              isLoadingCreate ||
+              isLoadingUpdate ||
+              !isImageSafe ||
+              isImageProcessing ||
+              isSubmitting
+            } // Disable if image is not safe
           >
             {isLoadingCreate || isLoadingUpdate ? "Loading...." : action} Post
           </Button>
