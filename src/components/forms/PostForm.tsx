@@ -24,7 +24,7 @@ import {
   useCreatePost,
   useUpdatePost,
 } from "@/lib/react-query/queriesAndMutations.ts";
-import { checkForProfanity } from "@/lib/appwrite/api.ts";
+import { checkForProfanity, paraPhraseText } from "@/lib/appwrite/api.ts";
 
 type PostFormProps = {
   post?: Models.Document;
@@ -44,6 +44,7 @@ const PostForm = ({ post, action }: PostFormProps) => {
 
   const [captionInput, setCaptionInput] = useState("");
   const [isImageSafe, setIsImageSafe] = useState(true);
+  const [paraphrases, setParaphrases] = useState([]);
 
   const form = useForm<z.infer<typeof PostValidation>>({
     resolver: zodResolver(PostValidation),
@@ -175,20 +176,29 @@ const PostForm = ({ post, action }: PostFormProps) => {
           )}
         />
 
-        {/* Conditional Rendering for Grammar Check Button */}
+        {/* Conditional Rendering for Paraphrase Check Button */}
         {captionInput && (
           <div className="flex justify-end">
             <Button
               type="button"
               className="shad-button_secondary"
-              onClick={() => {
-                // Logic for grammar checking can be implemented here
-                toast({
-                  title: "Grammar check functionality is not implemented yet.",
-                });
+              onClick={async () => {
+                const paraphrases = await paraPhraseText(captionInput); // Call the paraphrase function
+                if (paraphrases.length > 0) {
+                  const firstParaphrase = paraphrases[0];
+                  setCaptionInput(firstParaphrase);
+                  form.setValue("caption", firstParaphrase);
+                } else {
+                  toast({
+                    title: "Paraphrasing failed",
+                    description:
+                      "Could not paraphrase the text. Try again later.",
+                    variant: "error",
+                  });
+                }
               }}
             >
-              Check Grammar
+              Make Paraphrase
             </Button>
           </div>
         )}

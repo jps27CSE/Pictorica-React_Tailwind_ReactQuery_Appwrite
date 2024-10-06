@@ -475,3 +475,31 @@ export async function checkForProfanity(text: string) {
     return false;
   }
 }
+
+export async function paraPhraseText(text: string) {
+  try {
+    const response = await fetch("https://api.ai21.com/studio/v1/paraphrase", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${import.meta.env.VITE_AI21STUDIO_API}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        text: text,
+        style: "casual",
+        startIndex: 0,
+      }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      console.error("Error data:", errorData);
+      return;
+    }
+    const data = await response.json();
+    return data.suggestions?.map((suggestion: any) => suggestion.text) || [];
+  } catch (error) {
+    console.error("Error:", error);
+    return [];
+  }
+}
